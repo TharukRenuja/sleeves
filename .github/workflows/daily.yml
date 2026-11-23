@@ -1,0 +1,50 @@
+name: daily-sleeves
+
+on:
+  schedule:
+    - cron: "0 1 * * *"          # 01:00 UTC daily
+  workflow_dispatch:
+    inputs:
+      countries:
+        description: "Apple chart country codes"
+        default: "us,gb,jp,br,in,de,fr,mx,kr,au,ca,es"
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: sudo apt-get update && sudo apt-get install -y ffmpeg gifsicle
+      - run: pip install pillow numpy
+      - name: Fetch covers
+        run: python fetch.py --countries "${{ inputs.countries || 'us,gb,jp,br,in,de,fr,mx,kr,au,ca,es' }}"
+      - name: Render
+        run: python render.py
+      - name: Assemble site
+        run: |
+          cp covers.json dist/covers.json
+          ls -lh dist
+      - uses: actions/upload-pages-artifact@v3
+        with: { path: dist }
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

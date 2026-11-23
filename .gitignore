@@ -1,0 +1,4 @@
+covers/
+dist/
+covers.json
+__pycache__/

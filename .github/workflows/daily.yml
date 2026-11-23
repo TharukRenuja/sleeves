@@ -34,6 +34,7 @@ jobs:
         run: python render.py
       - name: Assemble site
         run: |
+          cp -R site/. dist/
           cp covers.json dist/covers.json
           ls -lh dist
       - uses: actions/upload-pages-artifact@v3

@@ -2,7 +2,7 @@ name: daily-sleeves
 
 on:
   schedule:
-    - cron: "0 1 * * *"          # 01:00 UTC daily
+    - cron: "17 0 * * *"         # 00:17 UTC
   workflow_dispatch:
     inputs:
       countries:
@@ -10,7 +10,7 @@ on:
         default: "us,gb,jp,br,in,de,fr,mx,kr,au,ca,es"
 
 permissions:
-  contents: read
+  contents: write
   pages: write
   id-token: write
 
@@ -23,8 +23,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with: { python-version: "3.12" }
       - run: sudo apt-get update && sudo apt-get install -y ffmpeg gifsicle
       - run: pip install pillow numpy
@@ -37,8 +37,23 @@ jobs:
           cp -R site/. dist/
           cp covers.json dist/covers.json
           ls -lh dist
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v5
         with: { path: dist }
+
+  keepalive:
+    needs: build
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Keep Alive
+        run: |
+          if [ "$(date -u +%d)" = "01" ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git commit --allow-empty -m "chore: keep schedule alive"
+            git push
+          fi
 
   deploy:
     needs: build
@@ -48,4 +63,4 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
